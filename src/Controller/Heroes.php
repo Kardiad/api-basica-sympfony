@@ -17,17 +17,25 @@ class Heroes extends AbstractController {
         $status = 500;
         $msg = "/nuevo fails!!!";
         $input = $request->request->all();
+        $mime = $request->files->get("img")->getMimeType();
+        $size = filesize($request->files->get("img")->getPathName());
+        $img = "data:$mime;base64,".base64_encode(file_get_contents($request->files->get("img")->getPathName()));
         if(!empty($input)){
             $status = 200;
             $msg = "/nuevo works!!!";
+            $input["img"] = $img;
+            $input["size"] = $size;
             $model->setNombre($input["nombre"]);
             $model->setAlterego($input["alterego"]);
             $model->setCodigo($input["codigo"]);
             $model->setAparicion($input["aparicion"]);
+            $model->setImg($img);
+            $model->setImgSize($size);
             $entityManager->persist($model);
             $entityManager->flush();
-            header("Content-Type: application/json");
         }
+        header("Content-Type: application/json");
+        header("Access-Control-Allow-Origin: *");
         return new Response(json_encode([
             "status" => $status,
             "msg" => $msg
@@ -39,12 +47,14 @@ class Heroes extends AbstractController {
         $manager = $entityManager->getRepository(EntityHeroes::class);
         $data = $manager->findAll();
         header("Content-Type: application/json");
+        header("Access-Control-Allow-Origin: *");
         return new Response(json_encode(array_map(fn($e)=>[
             "id" => $e->getId(),
             "nombre" => $e->getNombre(),
             "codigo" => $e->getCodigo(),
             "aparicion" => $e->getAparicion(),
-            "alterego" => $e->getAlterego()
+            "alterego" => $e->getAlterego(),
+            "img" => fread($e->getImg(), $e->getImgSize())
         ], $data)));
     }
 
@@ -63,7 +73,8 @@ class Heroes extends AbstractController {
             !empty($input['aparicion'])? $hero->setAparicion($input["aparicion"]) : "";
             $entityManager->flush();
         }
-        header("Content-Type:application/json");
+        header("Content-Type: application/json");
+        header("Access-Control-Allow-Origin: *");
         return new Response(json_encode([
             "status" => $status,
             "id" => $id,
@@ -81,7 +92,8 @@ class Heroes extends AbstractController {
             $entityManager->remove($hero);
             $entityManager->flush();
         }
-        header("Content-Type:application/json");
+        header("Content-Type: application/json");
+        header("Access-Control-Allow-Origin: *");
         return new Response(json_encode([
             "status" => $status,
             "id" => $id

@@ -3,6 +3,7 @@
 namespace App\Entity;
 
 use App\Repository\HeroesRepository;
+use Doctrine\DBAL\Types\Types;
 use Doctrine\ORM\Mapping as ORM;
 
 #[ORM\Entity(repositoryClass: HeroesRepository::class)]
@@ -24,6 +25,12 @@ class Heroes
 
     #[ORM\Column(length: 200)]
     private ?string $aparicion = null;
+
+    #[ORM\Column(type: Types::BLOB, nullable: true)]
+    private $img = null;
+
+    #[ORM\Column(nullable: true)]
+    private ?int $img_size = null;
 
     public function getId(): ?int
     {
@@ -81,5 +88,29 @@ class Heroes
     public function __toString()
     {
         return "{ nombre: $this->nombre, codigo: $this->codigo, alterego:$this->alterego, aparicion:$this->aparicion}";
+    }
+
+    public function getImg()
+    {
+        return $this->img;
+    }
+
+    public function setImg($img): static
+    {
+        $this->img = $img;
+
+        return $this;
+    }
+
+    public function getImgSize(): ?int
+    {
+        return $this->img_size;
+    }
+
+    public function setImgSize(?int $img_size): static
+    {
+        $this->img_size = $img_size;
+
+        return $this;
     }
 }

@@ -26,7 +26,8 @@ class Usuarios extends AbstractController{
             $status = 200;
             $message = "Usuario insertado a bbdd";
         }
-        header("Content-Type:application/json");
+        header("Content-Type: application/json");
+        header("Access-Control-Allow-Origin: *");
         return new Response(json_encode([
             "status" => $status,
             "msg" => $message
@@ -59,7 +60,8 @@ class Usuarios extends AbstractController{
                     ]
                 ];
         }
-        header("Content-Type:application/json");
+        header("Content-Type: application/json");
+        header("Access-Control-Allow-Origin: *");
         return new Response(json_encode($response));
     }
 
@@ -80,7 +82,8 @@ class Usuarios extends AbstractController{
             $msg = "Datos actualizados";
             $manager->flush();
         }
-        header("Content-Type:application/json");
+        header("Content-Type: application/json");
+        header("Access-Control-Allow-Origin: *");
         return new Response(json_encode([
             "status" => $status,
             "msg" => $msg
@@ -113,7 +116,8 @@ class Usuarios extends AbstractController{
                     "data" => []
                 ];
         }
-        header("Content-Type:application/json");
+        header("Content-Type: application/json");
+        header("Access-Control-Allow-Origin: *");
         return new Response(json_encode($response));
     }
 
