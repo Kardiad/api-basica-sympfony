@@ -4,6 +4,7 @@ namespace App\Repository;
 
 use App\Entity\Heroes;
 use Doctrine\Bundle\DoctrineBundle\Repository\ServiceEntityRepository;
+use Doctrine\ORM\QueryBuilder;
 use Doctrine\Persistence\ManagerRegistry;
 
 /**
@@ -45,4 +46,14 @@ class HeroesRepository extends ServiceEntityRepository
 //            ->getOneOrNullResult()
 //        ;
 //    }
+
+    public function findByParams(string $name) : array{
+        $qb = $this->createQueryBuilder('h');
+        $query = $qb
+            ->where($qb->expr()->like('h.nombre', ":nombre"))
+            ->setParameter("nombre", "%$name%")
+            ->getQuery();
+        return $query->execute();
+    }
+
 }

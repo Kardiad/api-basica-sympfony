@@ -11,6 +11,11 @@ use Symfony\Component\HttpFoundation\Request;
 
 class Heroes extends AbstractController {
 
+    public function __construct() {
+        header("Content-Type: application/json");
+        header("Access-Control-Allow-Origin: *");
+    }
+
     #[Route("/heroe/nuevo", methods:["POST"])]
     public function crearHeroe(EntityManagerInterface $entityManager, Request $request): Response{
         $model = new EntityHeroes();
@@ -34,8 +39,7 @@ class Heroes extends AbstractController {
             $entityManager->persist($model);
             $entityManager->flush();
         }
-        header("Content-Type: application/json");
-        header("Access-Control-Allow-Origin: *");
+
         return new Response(json_encode([
             "status" => $status,
             "msg" => $msg
@@ -46,8 +50,6 @@ class Heroes extends AbstractController {
     public function mostrarHeroes(EntityManagerInterface $entityManager): Response{
         $manager = $entityManager->getRepository(EntityHeroes::class);
         $data = $manager->findAll();
-        header("Content-Type: application/json");
-        header("Access-Control-Allow-Origin: *");
         return new Response(json_encode(array_map(fn($e)=>[
             "id" => $e->getId(),
             "nombre" => $e->getNombre(),
@@ -58,27 +60,50 @@ class Heroes extends AbstractController {
         ], $data)));
     }
 
+    #[Route("/heroe/obtener/{id}")]
+    public function obtenerHeroe(int $id, EntityManagerInterface $entityManager, Request $request): Response{
+        $id ?? 0 ;
+        $hero = null;
+        $send = null;
+        if($id>0){
+            $hero = $entityManager->find(EntityHeroes::class, $id);
+        }
+        if($hero != null){
+            $send = json_encode([    
+                0 => [
+                    "id" => $hero->getId(),
+                    "nombre" => $hero->getNombre(),
+                    "codigo" => $hero->getCodigo(),
+                    "aparicion" => $hero->getAparicion(),
+                    "alterego" => $hero->getAlterego(),
+                    "img" => fread($hero->getImg(), $hero->getImgSize())
+                ]    
+            ]);
+        }
+        return new Response($send);
+
+    }
+
     #[Route("/heroe/modificar/{id}", methods:["PATCH"])]
     public function modificarHeroes(int $id, EntityManagerInterface $entityManager, Request $request): Response{
         $id ?? 0;
         $input = $request->query->all();
-        $status = 500;
+        $hero = null;
         if(!empty($input) && $id > 0){
-            $status = 200;
-            //Hacer el update
+            $status = 400;
             $hero = $entityManager->find(EntityHeroes::class, $id);
+        }
+        if($hero){
+            $status = 200;
             !empty($input['nombre'])? $hero->setNombre($input["nombre"]) : "";
             !empty($input['alterego'])? $hero->setAlterego($input["alterego"]) : "";
             !empty($input['codigo'])? $hero->setCodigo($input["codigo"]) : "";
             !empty($input['aparicion'])? $hero->setAparicion($input["aparicion"]) : "";
             $entityManager->flush();
         }
-        header("Content-Type: application/json");
-        header("Access-Control-Allow-Origin: *");
         return new Response(json_encode([
             "status" => $status,
-            "id" => $id,
-            "request" => $input
+            "id" => $id
         ]));
     }
 
@@ -92,13 +117,32 @@ class Heroes extends AbstractController {
             $entityManager->remove($hero);
             $entityManager->flush();
         }
-        header("Content-Type: application/json");
-        header("Access-Control-Allow-Origin: *");
         return new Response(json_encode([
             "status" => $status,
             "id" => $id
         ]));
     }
+
+    #[Route("/heroe/buscar", methods:["GET"])]
+    public function buscarHeroePorParam(EntityManagerInterface $manager, Request $request) : Response {
+        $param = $request->query->get('q');
+        $heroes = [];
+        if($param){
+           $heroes =array_map(fn($e)=>[
+            "id" => $e->getId(),
+            "nombre" => $e->getNombre(),
+            "codigo" => $e->getCodigo(),
+            "aparicion" => $e->getAparicion(),
+            "alterego" => $e->getAlterego(),
+            "img" => fread($e->getImg(), $e->getImgSize())
+           ], $manager->getRepository(EntityHeroes::class)
+                ->findByParams($param));
+           
+        }
+        return new Response(json_encode($heroes));
+    }
+
+    //Paginación para otro momento
 
 }
 
