@@ -2,7 +2,10 @@
 
 namespace App\Controller;
 
+use App\Entity\Hero;
 use App\Entity\Heroes as EntityHeroes;
+use App\Forms\HeroForms;
+use App\Helpers\Patchgetter;
 use Doctrine\ORM\EntityManagerInterface;
 use Symfony\Bundle\FrameworkBundle\Controller\AbstractController;
 use Symfony\Component\HttpFoundation\Response;
@@ -22,20 +25,18 @@ class Heroes extends AbstractController {
         $status = 500;
         $msg = "/nuevo fails!!!";
         $input = $request->request->all();
-        $mime = $request->files->get("img")->getMimeType();
-        $size = filesize($request->files->get("img")->getPathName());
-        $img = "data:$mime;base64,".base64_encode(file_get_contents($request->files->get("img")->getPathName()));
+        $img = $this->getImg($request);
         if(!empty($input)){
             $status = 200;
             $msg = "/nuevo works!!!";
-            $input["img"] = $img;
-            $input["size"] = $size;
+            $input["img"] = $img['img'];
+            $input["size"] = $img['size'];
             $model->setNombre($input["nombre"]);
             $model->setAlterego($input["alterego"]);
             $model->setCodigo($input["codigo"]);
             $model->setAparicion($input["aparicion"]);
             $model->setImg($img);
-            $model->setImgSize($size);
+            $model->setImgSize($img['size']);
             $entityManager->persist($model);
             $entityManager->flush();
         }
@@ -86,9 +87,18 @@ class Heroes extends AbstractController {
 
     #[Route("/heroe/modificar/{id}", methods:["PATCH"])]
     public function modificarHeroes(int $id, EntityManagerInterface $entityManager, Request $request): Response{
+        // 1º parametrizar la pedazo de mierda que es php://input
+        // 2º Fichero temporal para stream de datos.
+        // 3º Averiguar tamaño fichero
+        // 4º Extraer mime
+        // 5º Hacer update de los demás parámetros
+        
         $id ?? 0;
         $input = $request->query->all();
         $hero = null;
+        $status = 500;
+        $input = (new Patchgetter())->get();
+        var_dump($input);
         if(!empty($input) && $id > 0){
             $status = 400;
             $hero = $entityManager->find(EntityHeroes::class, $id);
@@ -99,11 +109,22 @@ class Heroes extends AbstractController {
             !empty($input['alterego'])? $hero->setAlterego($input["alterego"]) : "";
             !empty($input['codigo'])? $hero->setCodigo($input["codigo"]) : "";
             !empty($input['aparicion'])? $hero->setAparicion($input["aparicion"]) : "";
+            !empty($input['img'])?$hero->setImg($input['img']['file']):"";
+            !empty($input['img'])?$hero->getImgSize($input['img']['size']):"";
             $entityManager->flush();
         }
         return new Response(json_encode([
-            "status" => $status,
-            "id" => $id
+           "status" => $status,
+            "id" => $id,
+            "data" => [
+                0 => [
+                    "nombre" => $hero->getNombre(),
+                    "alterego" => $hero->getAlterego(),
+                    "codigo" => $hero->getCodigo(),
+                    "aparicion" => $hero->getAparicion(),
+                    "img" => $hero->getImg()
+                ]
+            ]
         ]));
     }
 
@@ -119,7 +140,7 @@ class Heroes extends AbstractController {
         }
         return new Response(json_encode([
             "status" => $status,
-            "id" => $id
+            "msg" => "Heroe $id deleted succesfull"
         ]));
     }
 
@@ -142,6 +163,16 @@ class Heroes extends AbstractController {
         return new Response(json_encode($heroes));
     }
 
+
+    private function getImg(Request $request):array{
+        $mime = $request->files->get("img")->getMimeType();
+        $size = filesize($request->files->get("img")->getPathName());
+        $img = "data:$mime;base64,".base64_encode(file_get_contents($request->files->get("img")->getPathName()));
+        return [
+            "img" => $img,
+            "size" => $size
+        ];
+    }
     //Paginación para otro momento
 
 }
