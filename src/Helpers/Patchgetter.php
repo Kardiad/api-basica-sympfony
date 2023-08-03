@@ -14,17 +14,19 @@ class Patchgetter {
     }
 
     private function getIndex():void{
-        preg_match_all('/name="\w+"\s+\w+/', $this->inputData, $names);
+        preg_match_all('/name="\w+"\s+.+/', $this->inputData, $names);
         foreach($names[0] as $value){
             preg_match('/"\w+"/', $value, $name);
-            preg_match('/\s\w+/', $value, $val);
-            $this->dictionaryData[str_replace('"', "", $name[0])] = $val[0];
+            preg_match('/\s+.+/', $value, $val);
+            $value = preg_replace('/----------------------------\d+/', '', $val[0]);
+            $this->dictionaryData[str_replace('"', "", $name[0])] = trim($value);
         }
     }
 
     private function getFiles(): void{
+        preg_match('/filename=".+?"/', $this->inputData, $mat);
         $file_data = explode('----------------------------', $this->inputData)[1];
-        if(str_contains($file_data, 'filename=')){
+        if(!empty($mat)){
             $file_metadata = explode(';', preg_replace('/\n/', ';', $file_data));
             preg_match('/"\w+"/', $file_metadata[2], $field_name);
             preg_match('/"\w+.+/', $file_metadata[3], $file_name);

@@ -2,9 +2,7 @@
 
 namespace App\Controller;
 
-use App\Entity\Hero;
 use App\Entity\Heroes as EntityHeroes;
-use App\Forms\HeroForms;
 use App\Helpers\Patchgetter;
 use Doctrine\ORM\EntityManagerInterface;
 use Symfony\Bundle\FrameworkBundle\Controller\AbstractController;
@@ -37,6 +35,7 @@ class Heroes extends AbstractController {
             $model->setAparicion($input["aparicion"]);
             $model->setImg($img);
             $model->setImgSize($img['size']);
+            $model->setEditorial($input['editorial']);
             $entityManager->persist($model);
             $entityManager->flush();
         }
@@ -57,7 +56,8 @@ class Heroes extends AbstractController {
             "codigo" => $e->getCodigo(),
             "aparicion" => $e->getAparicion(),
             "alterego" => $e->getAlterego(),
-            "img" => fread($e->getImg(), $e->getImgSize())
+            "img" => fread($e->getImg(), $e->getImgSize()),
+            "editorial" => $e->getEditorial()
         ], $data)));
     }
 
@@ -87,18 +87,11 @@ class Heroes extends AbstractController {
 
     #[Route("/heroe/modificar/{id}", methods:["PATCH"])]
     public function modificarHeroes(int $id, EntityManagerInterface $entityManager, Request $request): Response{
-        // 1º parametrizar la pedazo de mierda que es php://input
-        // 2º Fichero temporal para stream de datos.
-        // 3º Averiguar tamaño fichero
-        // 4º Extraer mime
-        // 5º Hacer update de los demás parámetros
-        
         $id ?? 0;
         $input = $request->query->all();
         $hero = null;
         $status = 500;
         $input = (new Patchgetter())->get();
-        var_dump($input);
         if(!empty($input) && $id > 0){
             $status = 400;
             $hero = $entityManager->find(EntityHeroes::class, $id);
@@ -111,6 +104,7 @@ class Heroes extends AbstractController {
             !empty($input['aparicion'])? $hero->setAparicion($input["aparicion"]) : "";
             !empty($input['img'])?$hero->setImg($input['img']['file']):"";
             !empty($input['img'])?$hero->getImgSize($input['img']['size']):"";
+            !empty($input['editorial'])?$hero->setEditorial($input['editorial']):"";
             $entityManager->flush();
         }
         return new Response(json_encode([
@@ -122,7 +116,8 @@ class Heroes extends AbstractController {
                     "alterego" => $hero->getAlterego(),
                     "codigo" => $hero->getCodigo(),
                     "aparicion" => $hero->getAparicion(),
-                    "img" => $hero->getImg()
+                    "img" => $hero->getImg(),
+                    "editorial" => $hero->getEditorial()
                 ]
             ]
         ]));

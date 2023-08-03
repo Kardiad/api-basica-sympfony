@@ -32,6 +32,9 @@ class Heroes
     #[ORM\Column(nullable: true)]
     private ?int $img_size = null;
 
+    #[ORM\Column(length: 200)]
+    private ?string $editorial = null;
+
     public function getId(): ?int
     {
         return $this->id;
@@ -110,6 +113,18 @@ class Heroes
     public function setImgSize(?int $img_size): static
     {
         $this->img_size = $img_size;
+
+        return $this;
+    }
+
+    public function getEditorial(): ?string
+    {
+        return $this->editorial;
+    }
+
+    public function setEditorial(string $editorial): static
+    {
+        $this->editorial = $editorial;
 
         return $this;
     }
