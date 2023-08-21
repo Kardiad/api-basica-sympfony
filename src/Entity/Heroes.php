@@ -26,14 +26,27 @@ class Heroes
     #[ORM\Column(length: 200)]
     private ?string $aparicion = null;
 
-    #[ORM\Column(type: Types::BLOB, nullable: true)]
+    #[ORM\Column(length: 200)]
     private $img = null;
-
-    #[ORM\Column(nullable: true)]
-    private ?int $img_size = null;
 
     #[ORM\Column(length: 200)]
     private ?string $editorial = null;
+
+    #[ORM\Column(length: 200)]
+    private ?string $creador = null;
+
+    public function getArray(): ?array{
+        return [
+            'id' => $this->id,
+            'nombre' => $this->nombre,
+            'codigo' => $this->codigo,
+            'alterego' => $this->alterego,
+            'aparicion' => $this->aparicion,
+            'img' => $this->img,
+            'editorial' => $this->editorial,
+            'creador' => $this->creador
+        ];
+    }
 
     public function getId(): ?int
     {
@@ -105,18 +118,6 @@ class Heroes
         return $this;
     }
 
-    public function getImgSize(): ?int
-    {
-        return $this->img_size;
-    }
-
-    public function setImgSize(?int $img_size): static
-    {
-        $this->img_size = $img_size;
-
-        return $this;
-    }
-
     public function getEditorial(): ?string
     {
         return $this->editorial;
@@ -125,6 +126,18 @@ class Heroes
     public function setEditorial(string $editorial): static
     {
         $this->editorial = $editorial;
+
+        return $this;
+    }
+
+    public function getCreador(): ?string
+    {
+        return $this->creador;
+    }
+
+    public function setCreador(string $creador): static
+    {
+        $this->creador = $creador;
 
         return $this;
     }

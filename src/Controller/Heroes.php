@@ -12,37 +12,49 @@ use Symfony\Component\HttpFoundation\Request;
 
 class Heroes extends AbstractController {
 
+    private string $base_url = "";
+    private string $hero_path = "";
+    private string $public_path = "";
+
     public function __construct() {
-        header("Content-Type: application/json");
-        header("Access-Control-Allow-Origin: *");
+       $this->base_url = $_SERVER["SYMFONY_APPLICATION_DEFAULT_ROUTE_SCHEME"]."://".$_SERVER['HTTP_HOST'];
+       $this->hero_path = '/uploads/heroes/';
+       $this->public_path = $_SERVER['DOCUMENT_ROOT'];
+       
     }
 
     #[Route("/heroe/nuevo", methods:["POST"])]
     public function crearHeroe(EntityManagerInterface $entityManager, Request $request): Response{
+        //TODO testing some type of files
         $model = new EntityHeroes();
-        $status = 500;
-        $msg = "/nuevo fails!!!";
         $input = $request->request->all();
-        $img = $this->getImg($request);
+        $img = $request->files->get("img");
+        $new_name = md5($img->getClientOriginalName()).'.'.$img->guessExtension();
+        $path = $this->base_url.$this->hero_path.$new_name;
+        $img->move($this->getParameter("uploads_hero"), $new_name);
+        $codigo = explode(" ", $input['editorial'])[0]."-".$input['nombre'];
+        $input['codigo'] = $codigo;
+        $status = 500;
+        $msg = "error";
         if(!empty($input)){
-            $status = 200;
-            $msg = "/nuevo works!!!";
-            $input["img"] = $img['img'];
-            $input["size"] = $img['size'];
+            $status = "200";
+            $msg ="works";
             $model->setNombre($input["nombre"]);
             $model->setAlterego($input["alterego"]);
-            $model->setCodigo($input["codigo"]);
+            $model->setCodigo($codigo);
             $model->setAparicion($input["aparicion"]);
-            $model->setImg($img);
-            $model->setImgSize($img['size']);
+            $model->setImg($path);
             $model->setEditorial($input['editorial']);
+            $model->setCreador($input['creador']);
             $entityManager->persist($model);
             $entityManager->flush();
         }
 
         return new Response(json_encode([
-            "status" => $status,
-            "msg" => $msg
+            'status' => $status,
+            'msg' => $msg,
+            'data' =>
+                [0 => $model->getArray()]
         ]));
     }
 
@@ -50,15 +62,20 @@ class Heroes extends AbstractController {
     public function mostrarHeroes(EntityManagerInterface $entityManager): Response{
         $manager = $entityManager->getRepository(EntityHeroes::class);
         $data = $manager->findAll();
-        return new Response(json_encode(array_map(fn($e)=>[
-            "id" => $e->getId(),
-            "nombre" => $e->getNombre(),
-            "codigo" => $e->getCodigo(),
-            "aparicion" => $e->getAparicion(),
-            "alterego" => $e->getAlterego(),
-            "img" => fread($e->getImg(), $e->getImgSize()),
-            "editorial" => $e->getEditorial()
-        ], $data)));
+        return new Response(json_encode([
+            'status' => 200,
+            'msg' => "works",
+            'data' => array_map(fn($e)=>[
+                "id" => $e->getId(),
+                "nombre" => $e->getNombre(),
+                "codigo" => $e->getCodigo(),
+                "aparicion" => $e->getAparicion(),
+                "alterego" => $e->getAlterego(),
+                "img" => $e->getImg(),
+                "editorial" => $e->getEditorial(),
+                "creador" => $e->getCreador()
+        ], $data)
+        ]));
     }
 
     #[Route("/heroe/obtener/{id}")]
@@ -66,19 +83,28 @@ class Heroes extends AbstractController {
         $id ?? 0 ;
         $hero = null;
         $send = null;
+        $status = 500;
+        $msg = "not found";
         if($id>0){
+            $status = 200;
             $hero = $entityManager->find(EntityHeroes::class, $id);
         }
         if($hero != null){
-            $send = json_encode([    
-                0 => [
-                    "id" => $hero->getId(),
-                    "nombre" => $hero->getNombre(),
-                    "codigo" => $hero->getCodigo(),
-                    "aparicion" => $hero->getAparicion(),
-                    "alterego" => $hero->getAlterego(),
-                    "img" => fread($hero->getImg(), $hero->getImgSize())
-                ]    
+            $send = json_encode([
+                'status' => $status,     
+                'msg' => $msg,
+                'data' =>[
+                    0 => [
+                        "id" => $hero->getId(),
+                        "nombre" => $hero->getNombre(),
+                        "codigo" => $hero->getCodigo(),
+                        "aparicion" => $hero->getAparicion(),
+                        "alterego" => $hero->getAlterego(),
+                        "editorial" => $hero->getEditorial(),
+                        "img" => $hero->getImg(),
+                        'creador' => $hero->getCreador()
+                    ]    
+                ]
             ]);
         }
         return new Response($send);
@@ -87,29 +113,36 @@ class Heroes extends AbstractController {
 
     #[Route("/heroe/modificar/{id}", methods:["PATCH"])]
     public function modificarHeroes(int $id, EntityManagerInterface $entityManager, Request $request): Response{
+        //header('Access-Control-Allow-Origin: *');
         $id ?? 0;
         $input = $request->query->all();
         $hero = null;
+        $input = (new Patchgetter($this->public_path.'/'.$this->hero_path))->get();
         $status = 500;
-        $input = (new Patchgetter())->get();
+        $path = $this->base_url.$this->hero_path.'/'.$input['img']['filename'];
+        $msg = "Server error";
         if(!empty($input) && $id > 0){
-            $status = 400;
             $hero = $entityManager->find(EntityHeroes::class, $id);
+        }
+        if(!$hero){
+            $status = 400;
+            $msg = "Hero not found";
         }
         if($hero){
             $status = 200;
+            $msg = "Works propperly";
             !empty($input['nombre'])? $hero->setNombre($input["nombre"]) : "";
             !empty($input['alterego'])? $hero->setAlterego($input["alterego"]) : "";
             !empty($input['codigo'])? $hero->setCodigo($input["codigo"]) : "";
             !empty($input['aparicion'])? $hero->setAparicion($input["aparicion"]) : "";
-            !empty($input['img'])?$hero->setImg($input['img']['file']):"";
-            !empty($input['img'])?$hero->getImgSize($input['img']['size']):"";
+            !empty($input['img'])?$hero->setImg($path):"";
             !empty($input['editorial'])?$hero->setEditorial($input['editorial']):"";
+            !empty($input['creador'])?$hero->setCreador($input['creador']):"";
             $entityManager->flush();
         }
         return new Response(json_encode([
-           "status" => $status,
-            "id" => $id,
+            "status" => $status,
+            "msg" => $msg,
             "data" => [
                 0 => [
                     "nombre" => $hero->getNombre(),
@@ -117,7 +150,8 @@ class Heroes extends AbstractController {
                     "codigo" => $hero->getCodigo(),
                     "aparicion" => $hero->getAparicion(),
                     "img" => $hero->getImg(),
-                    "editorial" => $hero->getEditorial()
+                    "editorial" => $hero->getEditorial(),
+                    "creador" => $hero->getCreador()
                 ]
             ]
         ]));
@@ -127,9 +161,18 @@ class Heroes extends AbstractController {
     public function borrarHeroes(int $id, EntityManagerInterface $entityManager, Request $request): Response{
         $id ?? 0;
         $status = 500;
-        if($id>0){
-            $status = 200;
+        $hero = null;
+        $file_path = null;
+        //TODO borrar los archivos de imagen, dado que sin darme cuenta es única
+        if($id !=0){
             $hero = $entityManager->find(EntityHeroes::class, $id);
+            $file_path = $this->public_path.'/'.$this->hero_path.'/'.explode('/', $hero->getImg())[count(explode('/', $hero->getImg()))-1];
+        }
+        if(file_exists($file_path)){
+            unlink($this->public_path.'/'.$this->hero_path.'/'.explode('/', $hero->getImg())[count(explode('/', $hero->getImg()))-1]);
+        }
+        if($hero != null){
+            $status = 200;
             $entityManager->remove($hero);
             $entityManager->flush();
         }
@@ -150,23 +193,16 @@ class Heroes extends AbstractController {
             "codigo" => $e->getCodigo(),
             "aparicion" => $e->getAparicion(),
             "alterego" => $e->getAlterego(),
-            "img" => fread($e->getImg(), $e->getImgSize())
+            "img" => $e->getImg(), $e->getImgSize()
            ], $manager->getRepository(EntityHeroes::class)
                 ->findByParams($param));
            
         }
-        return new Response(json_encode($heroes));
-    }
-
-
-    private function getImg(Request $request):array{
-        $mime = $request->files->get("img")->getMimeType();
-        $size = filesize($request->files->get("img")->getPathName());
-        $img = "data:$mime;base64,".base64_encode(file_get_contents($request->files->get("img")->getPathName()));
-        return [
-            "img" => $img,
-            "size" => $size
-        ];
+        return new Response(json_encode([
+            "status" => 200,
+            "msg" => "Search completed",
+            "data" => $heroes
+        ]));
     }
     //Paginación para otro momento
 
